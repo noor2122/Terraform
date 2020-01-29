@@ -1,0 +1,44 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+ "Description": "Create a basic Linux machine",
+    "Resources": {
+        "NewServer": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "ImageId": "ami-09d069a04349dc3cb",
+                "InstanceType": "t2.micro",
+                "KeyName": "useastkey",
+                "SubnetId":"subnet-080a4025241a4e6fa",
+		 "SecurityGroupIds": [
+          {
+            "Ref": "WebServerSecurityGroup"
+          }
+        ]
+            }
+	}, 	 	
+    "WebServerSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+      "VpcId": "vpc-092080882305c072e",
+        "GroupDescription": "Enable HTTP access via port 80 locked down to the load balancer + SSH access",
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "80",
+            "ToPort": "80",
+            "CidrIp": "0.0.0.0/0"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "22",
+            "ToPort": "22",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ]
+      }
+    }
+       
+    }
+
+
+}

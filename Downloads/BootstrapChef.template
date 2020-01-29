@@ -1,0 +1,84 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "Create a Chef solo bootstrapped Linux machine",
+	"Parameters": {
+    "KeyName": {
+      "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instances",
+      "Type": "AWS::EC2::KeyPair::KeyName",
+      "ConstraintDescription": "must be the name of an existing EC2 KeyPair."
+    }},
+	"Resources": {
+		"ChefServer": {
+			"Type": "AWS::EC2::Instance",
+			"Metadata" : {
+		  		"AWS::CloudFormation::Init" : {
+					"config" : {
+						"commands" : {
+							"chef" : {
+								"command" : "rpm -Uvh  \"https://opscode-omnibus-packages.s3.amazonaws.com/el/7/x86_64/chef-12.6.0-1.el7.x86_64.rpm\" "
+							}
+						}
+					}
+				  }
+				},
+				
+			"Properties": {
+					"ImageId": "ami-09d069a04349dc3cb",
+					"InstanceType": "t2.micro",
+					"KeyName": { "Ref" : "KeyName" },
+					"UserData"       : { "Fn::Base64" : { "Fn::Join" : ["", [
+			          "#!/bin/bash\n",
+					  "yum install -y wget\n",
+					  "wget \"https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz\" \n",
+					  "tar -xvzf aws-cfn-bootstrap-latest.tar.gz\n",
+					  "cd aws-cfn-bootstrap*\n",
+					  "python setup.py build\n",
+					  "python setup.py install\n",
+					  "wget https://s3.ap-south-1.amazonaws.com/files.cloudthat.com/aws/ez_setup.py\n",
+					  "python ez_setup.py\n",
+					  "/usr/bin/cfn-init -s ", { "Ref" : "AWS::StackId" }, " -r ChefServer ",
+			          "         --region ", { "Ref" : "AWS::Region" }, "\n"
+					  ]]}},
+
+		   "SubnetId":"subnet-080a4025241a4e6fa",
+			 "SecurityGroupIds": [ { "Ref": "ChefSoloSecurityGroup" } ]
+				
+			}
+		}, 	
+
+		"ChefSoloSecurityGroup": {
+		  "Type": "AWS::EC2::SecurityGroup",
+		  "Properties": {
+			"GroupDescription": "Enable HTTP access via port 80 locked down to the load balancer + SSH access",
+			"VpcId": "vpc-092080882305c072e",
+			"SecurityGroupIngress": [
+			  {
+				"IpProtocol": "tcp",
+				"FromPort": "80",
+				"ToPort": "80",
+				"CidrIp": "0.0.0.0/0"
+			  },
+			  {
+				"IpProtocol": "tcp",
+				"FromPort": "22",
+				"ToPort": "22",
+				"CidrIp": "0.0.0.0/0"
+			  }
+			]
+
+		  }
+
+		}
+	},
+	"Outputs" : {
+   		"StackName" : { "Value" : { "Ref" : "AWS::StackName" } },
+			"InstanceIp": {
+        	"Value": {
+          		"Fn::GetAtt": [
+            		"ChefServer",
+            		"PublicIp"
+          ]
+        }
+      }
+}
+}
